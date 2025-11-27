@@ -4,6 +4,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { OrderHistory } from './entities/order-history.entity';
 import { Repository } from 'typeorm';
 import { Order } from './entities/order.entity';
+import { Queue } from 'bullmq';
+import { InjectQueue } from '@nestjs/bullmq';
 
 @Injectable()
 export class OrdersService {
@@ -13,6 +15,8 @@ export class OrdersService {
     private readonly orderRepo: Repository<Order>,
     @InjectRepository(OrderHistory)
     private readonly orderHistoryRepo: Repository<OrderHistory>,
+    @InjectQueue('order-execution')
+    private readonly orderQueue: Queue,
   ) {}
 
   async createMarketOrder(createOrderDto: CreateOrderDto): Promise<Order> {
@@ -27,6 +31,23 @@ export class OrdersService {
     this.logger.log(
       `Order History created for orderId: ${newOrder.orderId} with status: ${newOrder.status}`,
     );
+
+    await this.orderQueue.add(
+      'execute-order',
+      {
+        orderId: newOrder.orderId,
+      },
+      {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 1000,
+        },
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    );
+    this.logger.log(`Order job enqueued for orderId: ${newOrder.orderId}`);
     return newOrder;
   }
 

@@ -18,9 +18,6 @@ export class OrdersController {
       await this.ordersService.createMarketOrder(createOrderDto);
 
     this.logger.log(`New order created with orderId: ${order.orderId}`);
-    return {
-      orderId: order.orderId,
-      status: order.status,
-    };
+    return order;
   }
 }

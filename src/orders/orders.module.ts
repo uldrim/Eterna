@@ -4,10 +4,17 @@ import { OrdersController } from './orders.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Order } from './entities/order.entity';
 import { OrderHistory } from './entities/order-history.entity';
+import { BullModule } from '@nestjs/bullmq';
+import { OrderWorker } from './order.worker';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Order, OrderHistory])],
+  imports: [
+    TypeOrmModule.forFeature([Order, OrderHistory]),
+    BullModule.registerQueue({
+      name: 'order-execution',
+    }),
+  ],
   controllers: [OrdersController],
-  providers: [OrdersService],
+  providers: [OrdersService, OrderWorker],
 })
 export class OrdersModule {}
